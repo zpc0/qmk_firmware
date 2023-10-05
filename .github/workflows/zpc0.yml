@@ -1,0 +1,44 @@
+name: zpc0 GitHub Actions
+on: push
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: 'zpc0'
+          submodules: recursive
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Setup Runner
+        run: |
+          sudo apt-get update
+          sudo apt-get --yes install binutils-avr gcc-avr avr-libc \
+          binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi libhidapi-hidraw0 libusb-dev
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install qmk
+      - name: Build firmware
+        run: qmk compile -kb zpc0/shotgun_cp -km default
+      - name: Upload firmware
+        uses: actions/upload-artifact@v3
+        with:
+          path: |
+            *.hex
+            *.bin
+            *.uf2
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            *.hex
+            *.bin
+            *.uf2
